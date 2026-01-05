@@ -67,35 +67,43 @@ def ai_grade_answer(question_text, student_answer, image_path=None, api_key=None
         return "API açarı tapılmadı."
     
     import google.generativeai as genai
+    import re
     genai.configure(api_key=api_key)
     
-    # Clean the input to avoid LaTeX parsing issues
-    clean_question = question_text.replace('\\', '\\\\')
-    clean_answer = student_answer.replace('\\', '\\\\')
+    # Remove LaTeX expressions to avoid parsing issues with AI
+    clean_question = re.sub(r'\\[(\[].*?\\[)\]]', '[MATH EXPRESSION]', question_text)
+    clean_question = re.sub(r'\\\(.*?\\\)', '[MATH EXPRESSION]', clean_question)
+    clean_question = re.sub(r'\$\$.*?\$\$', '[MATH EXPRESSION]', clean_question)
+    clean_question = re.sub(r'\$.*?\$', '[MATH EXPRESSION]', clean_question)
     
-    prompt = f"""Sən universitet müəllimisən və riyaziyyat suallarını qiymətləndirirsən.
+    clean_answer = re.sub(r'\\[(\[].*?\\[)\]]', '[MATH EXPRESSION]', student_answer)
+    clean_answer = re.sub(r'\\\(.*?\\\)', '[MATH EXPRESSION]', clean_answer)
+    clean_answer = re.sub(r'\$\$.*?\$\$', '[MATH EXPRESSION]', clean_answer)
+    clean_answer = re.sub(r'\$.*?\$', '[MATH EXPRESSION]', clean_answer)
+    
+    prompt = f"""You are a university mathematics professor grading student answers.
 
-Sual: {clean_question}
+QUESTION: {clean_question}
 
-Tələbənin mətn cavabı: {clean_answer}
+STUDENT ANSWER: {clean_answer}
 
-Əgər şəkil varsa, şəkildəki əl yazısı cavabını oxu və təhlil et. Şəkil riyazi düsturlar, hesablamalar və ya qrafiklər ola bilər.
+If there is an image, analyze the handwritten answer in it. The image may contain mathematical formulas, calculations, or graphs.
 
-Cavabı qiymətləndir:
-- Düzgünlük: Riyazi hesablamalar, düsturlar və məntiq
-- Tamlıq: Bütün addımlar göstərilibmi
-- Açıqlama: Cavab izah edilibmi
+Grade the answer based on:
+- Correctness: Mathematical calculations, formulas, and logic
+- Completeness: Are all steps shown?
+- Explanation: Is the answer explained?
 
-10 ballıq sistemlə qiymətləndir (0-10 arası tam rəqəm):
-- 10: Tam doğru, mükəmməl
-- 7-9: Kiçik səhvlərlə doğru
-- 4-6: Qismən doğru, əsas səhvlər var
-- 1-3: Minimal doğru, çox səhv
-- 0: Tam səhv və ya cavab yoxdur
+Grade on a 10-point scale (whole numbers only):
+- 10: Perfectly correct
+- 7-9: Mostly correct with minor errors
+- 4-6: Partially correct with major errors
+- 1-3: Minimally correct with many errors
+- 0: Completely wrong or no answer
 
-Format SƏRT şəkildə belə olsun:
-Xal: [0-10 arası rəqəm]
-Rəy: [Qısa rəy, nəyin doğru, nəyin səhv olduğunu bildir]"""
+Format your response EXACTLY like this:
+Score: [0-10 number]
+Feedback: [Brief feedback on what's correct and what's wrong]"""
     
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
