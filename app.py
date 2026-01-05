@@ -131,7 +131,7 @@ def set_api():
             import google.generativeai as genai
             genai.configure(api_key=api_key)
             # Make a simple test call to verify the key
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             response = model.generate_content("Hello")
             # If we get here without exception, key is valid
             session['api_key'] = api_key
