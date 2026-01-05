@@ -52,11 +52,15 @@ class Answer(db.Model):
 
 # --- Funksiyalar ---
 def get_exam_questions(subject_id):
-    # UNEC stili: 2 Asan, 2 Orta, 1 Çətin
-    easy = Question.query.filter_by(subject_id=subject_id, difficulty='Easy').order_by(db.func.random()).limit(2).all()
-    medium = Question.query.filter_by(subject_id=subject_id, difficulty='Medium').order_by(db.func.random()).limit(2).all()
-    hard = Question.query.filter_by(subject_id=subject_id, difficulty='Hard').order_by(db.func.random()).limit(1).all()
-    return easy + medium + hard
+    try:
+        # UNEC stili: 2 Asan, 2 Orta, 1 Çətin
+        easy = Question.query.filter_by(subject_id=subject_id, difficulty='Easy').order_by(db.func.random()).limit(2).all()
+        medium = Question.query.filter_by(subject_id=subject_id, difficulty='Medium').order_by(db.func.random()).limit(2).all()
+        hard = Question.query.filter_by(subject_id=subject_id, difficulty='Hard').order_by(db.func.random()).limit(1).all()
+        return easy + medium + hard
+    except Exception as e:
+        print(f"Error getting exam questions: {e}")
+        return []
 
 def ai_grade_answer(question_text, student_answer, image_path=None, api_key=None):
     if not api_key:
@@ -155,11 +159,14 @@ def exam(subject_id):
         return redirect(url_for('index'))
     
     if request.method == 'GET':
-        questions = get_exam_questions(subject_id)
-        if len(questions) < 5:
-            return "Bazada kifayət qədər sual yoxdur! Zəhmət olmasa əvvəlcə sualları əlavə edin."
-        
-        return render_template('exam.html', questions=questions, subject_id=subject_id)
+        try:
+            questions = get_exam_questions(subject_id)
+            if len(questions) < 5:
+                return "Bazada kifayət qədər sual yoxdur! Zəhmət olmasa əvvəlcə sualları əlavə edin."
+            
+            return render_template('exam.html', questions=questions, subject_id=subject_id)
+        except Exception as e:
+            return f"Xəta baş verdi: {str(e)}"
     
     if request.method == 'POST':
         results = []
@@ -258,6 +265,51 @@ with app.app_context():
         s3 = Subject(name="Riyazi Analiz")
         db.session.add_all([s1, s2, s3])
         db.session.commit()
+    
+    # Sualları əlavə et (əgər yoxdursa)
+    if not Question.query.first():
+        try:
+            # Riyazi Analiz sualları
+            math_subject = Subject.query.filter_by(name="Riyazi Analiz").first()
+            if math_subject:
+                # Asan suallar
+                easy_questions = [
+                    (r"1. Prove the equality \(A \cap B = B \cap A\) (Theoretical)", "Easy"),
+                    (r"2. Prove that a non-empty set of numbers that is bounded above has an upper bound. (Theoretical)", "Easy"),
+                    (r"3. Prove that a non-empty numerical set bounded below has a lower bound. (Theoretical)", "Easy"),
+                    (r"4. If \(\{x\}\) is a set of numbers and \(\{-x\}\) is the set of negatives, prove \(\inf\{-x\} = -\sup\{x\}\).", "Easy"),
+                    (r"5. Find the domain of \(f(x)=7\cot(\pi x)+\arcsin(18^{x})\)", "Easy"),
+                ]
+                
+                for text, difficulty in easy_questions:
+                    q = Question(text=text, difficulty=difficulty, subject_id=math_subject.id)
+                    db.session.add(q)
+                
+                # Orta suallar
+                medium_questions = [
+                    (r"24. Prove necessary and sufficient condition for differentiability ($f'(x_0)$ exists and is finite). (Theoretical)", "Medium"),
+                    (r"25. Prove the Product Rule: $(uv)^{\prime}=u^{\prime}v+uv^{\prime}$. (Theoretical)", "Medium"),
+                    (r"26. Differential of a function and its geometric meaning ($dy=f'(x)dx$). (Theoretical)", "Medium"),
+                ]
+                
+                for text, difficulty in medium_questions:
+                    q = Question(text=text, difficulty=difficulty, subject_id=math_subject.id)
+                    db.session.add(q)
+                
+                # Çətin suallar
+                hard_questions = [
+                    (r"50. Prove the Fundamental Theorem of Calculus. (Theoretical)", "Hard"),
+                ]
+                
+                for text, difficulty in hard_questions:
+                    q = Question(text=text, difficulty=difficulty, subject_id=math_subject.id)
+                    db.session.add(q)
+                
+                db.session.commit()
+                print("Questions seeded successfully")
+        except Exception as e:
+            print(f"Error seeding questions: {e}")
+            db.session.rollback()
 
 if __name__ == '__main__':
     app.run(debug=True)
