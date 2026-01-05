@@ -3,3 +3,4 @@ Flask-SQLAlchemy
 google-generativeai
 werkzeug
 gunicorn
+Pillow

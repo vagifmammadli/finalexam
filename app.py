@@ -62,7 +62,8 @@ def ai_grade_answer(question_text, student_answer, image_path=None, api_key=None
     if not api_key:
         return "API açarı tapılmadı."
     
-    client = genai.Client(api_key=api_key)
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
     
     prompt = f"""
 Sən universitet müəllimisən və riyaziyyat suallarını qiymətləndirirsən. 
@@ -91,16 +92,23 @@ Rəy: [Qısa rəy, nəyin doğru, nəyin səhv olduğunu bildir]
 """
     
     try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
         if image_path:
             full_path = os.path.join(app.config['UPLOAD_FOLDER'], image_path)
             with open(full_path, 'rb') as f:
                 image_data = f.read()
             # Determine mime type
             mime_type = 'image/png' if image_path.lower().endswith('.png') else 'image/jpeg'
-            contents = [prompt, types.Part(inline_data=types.Blob(mime_type=mime_type, data=image_data))]
-            response = client.models.generate_content(model='gemini-2.5-flash', contents=contents)
+            
+            from PIL import Image
+            import io
+            image = Image.open(io.BytesIO(image_data))
+            
+            response = model.generate_content([prompt, image])
         else:
-            response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            response = model.generate_content(prompt)
+        
         return response.text
     except Exception as e:
         return f"Xəta baş verdi: {str(e)}"
