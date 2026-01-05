@@ -1,320 +1,464 @@
+"""
+UNEC Exam Simulator - Flask Application
+An AI-powered exam system with automatic grading using Google Gemini API
+"""
+
 import os
 import random
+import re
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
+from markupsafe import Markup
 import google.generativeai as genai
-from google.generativeai import types
+from PIL import Image
 
+# Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'gizli_açar_bura_yaz'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'gizli_açar_bura_yaz')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///exam.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# API Setup (Açarını bura əlavə et)
-# GOOGLE_API_KEY = "BURA_ÖZ_GEMINI_API_AÇARINI_YAZ"
-# genai.configure(api_key=GOOGLE_API_KEY)
+# Create upload folder if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Initialize database
 db = SQLAlchemy(app)
 
-# --- Modellər ---
+
+# ============================================================================
+# TEMPLATE FILTERS
+# ============================================================================
+
+@app.template_filter('safe_no_comments')
+def safe_no_comments(text):
+    """
+    Escape HTML comment sequences to prevent parsing errors
+    while preserving other HTML content
+    """
+    if not text:
+        return ''
+    text = str(text).replace('<!--', '&lt;!--').replace('-->', '--&gt;')
+    return Markup(text)
+
+
+# ============================================================================
+# DATABASE MODELS
+# ============================================================================
+
 class Subject(db.Model):
+    """Subject/Course model"""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    questions = db.relationship('Question', backref='subject', lazy=True)
+    questions = db.relationship('Question', backref='subject', lazy=True, cascade='all, delete-orphan')
+    results = db.relationship('Result', backref='subject', lazy=True)
+
+    def __repr__(self):
+        return f'<Subject {self.name}>'
+
 
 class Question(db.Model):
+    """Question model with difficulty levels"""
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
-    difficulty = db.Column(db.String(20), nullable=False) # 'Easy', 'Medium', 'Hard'
+    difficulty = db.Column(db.String(20), nullable=False)  # 'Easy', 'Medium', 'Hard'
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    answers = db.relationship('Answer', backref='question', lazy=True)
+
+    def __repr__(self):
+        return f'<Question {self.id}: {self.difficulty}>'
+
 
 class Result(db.Model):
+    """Exam result model"""
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-    total_score = db.Column(db.Integer, nullable=False)
-    exam_date = db.Column(db.DateTime, nullable=False, default=db.func.now())
-    answers = db.relationship('Answer', backref='result', lazy=True)
-    subject = db.relationship('Subject', backref='results')
+    total_score = db.Column(db.Integer, nullable=False, default=0)
+    exam_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    answers = db.relationship('Answer', backref='result', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Result {self.username}: {self.total_score}>'
+
 
 class Answer(db.Model):
+    """Individual answer model"""
     id = db.Column(db.Integer, primary_key=True)
     result_id = db.Column(db.Integer, db.ForeignKey('result.id'), nullable=False)
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'), nullable=False)
     answer_text = db.Column(db.Text, nullable=True)
     image_path = db.Column(db.String(200), nullable=True)
-    points = db.Column(db.Integer, nullable=False)
-    max_points = db.Column(db.Integer, nullable=False)
+    points = db.Column(db.Integer, nullable=False, default=0)
+    max_points = db.Column(db.Integer, nullable=False, default=10)
     feedback = db.Column(db.Text, nullable=True)
-    question = db.relationship('Question', backref='answers')
 
-# --- Funksiyalar ---
+    def __repr__(self):
+        return f'<Answer {self.points}/{self.max_points}>'
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
 def get_exam_questions(subject_id):
+    """
+    Get exam questions in UNEC format: 2 Easy, 2 Medium, 1 Hard
+    Returns questions ordered by difficulty: Easy first, then Medium, then Hard
+    """
     try:
-        # UNEC stili: 2 Asan, 2 Orta, 1 Çətin
-        easy = Question.query.filter_by(subject_id=subject_id, difficulty='Easy').order_by(db.func.random()).limit(2).all()
-        medium = Question.query.filter_by(subject_id=subject_id, difficulty='Medium').order_by(db.func.random()).limit(2).all()
-        hard = Question.query.filter_by(subject_id=subject_id, difficulty='Hard').order_by(db.func.random()).limit(1).all()
-        return easy + medium + hard
+        easy_all = Question.query.filter_by(subject_id=subject_id, difficulty='Easy').all()
+        medium_all = Question.query.filter_by(subject_id=subject_id, difficulty='Medium').all()
+        hard_all = Question.query.filter_by(subject_id=subject_id, difficulty='Hard').all()
+        
+        random.shuffle(easy_all)
+        random.shuffle(medium_all)
+        random.shuffle(hard_all)
+        
+        easy = easy_all[:2]
+        medium = medium_all[:2]
+        hard = hard_all[:1]
+        
+        questions = easy + medium + hard
+        # Questions ordered by difficulty: Easy first, then Medium, then Hard
+        
+        return questions
     except Exception as e:
-        print(f"Error getting exam questions: {e}")
+        app.logger.error(f"Error getting exam questions: {e}")
         return []
 
+
+def clean_for_ai(text):
+    """
+    Clean LaTeX and text for AI processing
+    Converts LaTeX delimiters to $$ format and removes backslashes
+    """
+    if not text:
+        return ""
+    
+    # Convert LaTeX delimiters to $$
+    text = re.sub(r'\\\((.*?)\\\)', r'$\1$', text)  # \(...\) -> $...$
+    text = re.sub(r'\\\[(.*?)\\\]', r'$\1$', text)  # \[...\] -> $...$
+    
+    # Remove all backslashes
+    text = re.sub(r'\\', '', text)
+    
+    # Clean up extra spaces
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
+
+
 def ai_grade_answer(question_text, student_answer, image_path=None, api_key=None):
+    """
+    Grade student answer using Google Gemini AI
+    Returns formatted feedback with score and comments
+    """
     if not api_key:
-        return "API açarı tapılmadı."
-    
-    import google.generativeai as genai
-    import re
-    
-    # Completely strip all LaTeX and special characters to avoid any parsing issues
-    def clean_text(text):
-        # Remove all LaTeX expressions aggressively
-        text = re.sub(r'\\[(\[].*?\\[)\]]', '', text)
-        text = re.sub(r'\\\(.*?\\\)', '', text)
-        text = re.sub(r'\$\$.*?\$\$', '', text)
-        text = re.sub(r'\$.*?\$', '', text)
-        # Remove other LaTeX commands
-        text = re.sub(r'\\[a-zA-Z]+\{.*?\}', '', text)
-        text = re.sub(r'\\[a-zA-Z]+', '', text)
-        # Remove brackets and other math symbols that might cause issues
-        text = re.sub(r'[{}]', '', text)
-        # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
-        return text.strip()
-    
-    clean_question = clean_text(question_text)
-    clean_answer = clean_text(student_answer)
-    
-    # Very simple prompt to avoid any parsing issues
-    prompt = f"Grade this math answer. Question: {clean_question}. Student answer: {clean_answer}. Give a score from 0-10 and brief feedback."
+        return "Xal: 0\nRəy: API açarı tapılmadı."
     
     try:
+        clean_question = clean_for_ai(question_text)
+        clean_answer = clean_for_ai(student_answer)
+        
+        # Detailed grading prompt
+        prompt = f"""
+Grade this mathematics answer based on the following criteria:
+
+Question: {clean_question}
+
+Student Answer: {clean_answer}
+
+Grading Criteria:
+1. Mathematical Correctness (40%): Is the math accurate and correct?
+2. Completeness (30%): Does the answer fully address the question?
+3. Logical Reasoning (20%): Is the reasoning sound and well-structured?
+4. Clarity of Explanation (10%): Is the answer clearly expressed?
+
+Provide a score from 0-10 and brief feedback.
+
+Format your response as:
+Score: X/10
+Feedback: [brief explanation]
+"""
+        
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         if image_path:
             full_path = os.path.join(app.config['UPLOAD_FOLDER'], image_path)
             if os.path.exists(full_path):
-                from PIL import Image
-                image = Image.open(full_path)
-                response = model.generate_content([prompt, image])
+                try:
+                    image = Image.open(full_path)
+                    response = model.generate_content([prompt, image])
+                except Exception as img_error:
+                    app.logger.error(f"Error processing image: {img_error}")
+                    response = model.generate_content(prompt)
             else:
                 response = model.generate_content(prompt)
         else:
             response = model.generate_content(prompt)
         
-        # Parse the response to extract score and feedback
+        # Parse the response
         response_text = response.text.strip()
         
-        # Try to extract score
-        score_match = re.search(r'(\d+)', response_text)
+        # Extract score (0-10)
+        score_match = re.search(r'Score:\s*(\d+)/10', response_text, re.IGNORECASE)
         score = int(score_match.group(1)) if score_match else 5
+        score = max(0, min(10, score))  # Ensure score is between 0-10
         
-        # Ensure score is between 0-10
-        score = max(0, min(10, score))
+        # Extract feedback
+        feedback_match = re.search(r'Feedback:\s*(.+)', response_text, re.IGNORECASE | re.DOTALL)
+        feedback = feedback_match.group(1).strip() if feedback_match else response_text
         
-        return f"Xal: {score}\nRəy: {response_text}"
+        return f"Xal: {score}\nRəy: {feedback}"
         
     except Exception as e:
-        # Fallback grading if AI fails
+        app.logger.error(f"Error in AI grading: {e}")
         return f"Xal: 5\nRəy: Cavab qiymətləndirilə bilmədi: {str(e)}"
 
-# --- Rouselər ---
+
+def calculate_max_points(difficulty):
+    """Calculate maximum points based on difficulty level"""
+    points_map = {'Easy': 5, 'Medium': 10, 'Hard': 20}
+    return points_map.get(difficulty, 10)
+
+
+# ============================================================================
+# ROUTES
+# ============================================================================
+
 @app.route('/')
 def index():
+    """Main index page - shows username/API setup or subject selection"""
     if 'username' not in session:
         return render_template('index.html', need_username=True)
+    
     if 'api_key' not in session:
         return render_template('index.html', need_api=True, need_username=False)
+    
     subjects = Subject.query.all()
     return render_template('index.html', subjects=subjects, need_api=False, need_username=False)
 
+
 @app.route('/set_username', methods=['POST'])
 def set_username():
-    username = request.form.get('username')
+    """Set username in session"""
+    username = request.form.get('username', '').strip()
     if username:
         session['username'] = username
+        flash('İstifadəçi adı uğurla təyin edildi!', 'success')
+    else:
+        flash('İstifadəçi adı boş ola bilməz!', 'error')
     return redirect(url_for('index'))
+
 
 @app.route('/set_api', methods=['POST'])
 def set_api():
-    api_key = request.form.get('api_key')
-    if api_key:
+    """Set and validate Gemini API key"""
+    api_key = request.form.get('api_key', '').strip()
+    if not api_key:
+        flash('API açarı daxil edilməyib!', 'error')
+        return redirect(url_for('index'))
+    
+    try:
         # Test the API key validity
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            # Make a simple test call to verify the key
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content("Hello")
-            # If we get here without exception, key is valid
-            session['api_key'] = api_key
-            flash("API key is valid and saved!", "success")
-        except Exception as e:
-            flash(f"Invalid API key: {str(e)}", "error")
-            return redirect(url_for('index'))
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content("Hello")
+        
+        # If we get here without exception, key is valid
+        session['api_key'] = api_key
+        flash('API açarı uğurla təyin edildi!', 'success')
+    except Exception as e:
+        app.logger.error(f"Invalid API key: {e}")
+        flash(f'Yanlış API açarı: {str(e)}', 'error')
+    
     return redirect(url_for('index'))
+
 
 @app.route('/exam/<int:subject_id>', methods=['GET', 'POST'])
 def exam(subject_id):
+    """Exam page - display questions or process exam submission"""
     if 'username' not in session or 'api_key' not in session:
+        flash('İmtahana başlamaq üçün istifadəçi adı və API açarı lazımdır!', 'error')
         return redirect(url_for('index'))
+    
+    subject = Subject.query.get_or_404(subject_id)
     
     if request.method == 'GET':
         try:
             questions = get_exam_questions(subject_id)
             if len(questions) < 5:
-                return "Bazada kifayət qədər sual yoxdur! Zəhmət olmasa əvvəlcə sualları əlavə edin."
+                flash('Bazada kifayət qədər sual yoxdur! Zəhmət olmasa əvvəlcə sualları əlavə edin.', 'error')
+                return redirect(url_for('index'))
             
-            return render_template('exam.html', questions=questions, subject_id=subject_id)
+            return render_template('exam.html', questions=questions, subject_id=subject_id, subject_name=subject.name)
         except Exception as e:
-            return f"Xəta baş verdi: {str(e)}"
+            app.logger.error(f"Error in exam GET: {e}")
+            flash(f'Xəta baş verdi: {str(e)}', 'error')
+            return redirect(url_for('index'))
     
-    if request.method == 'POST':
+    # POST - Process exam submission
+    try:
         results = []
         total_score = 0
         
         # Create result entry
-        result = Result(username=session['username'], subject_id=subject_id, total_score=0)
+        result = Result(
+            username=session['username'],
+            subject_id=subject_id,
+            total_score=0
+        )
         db.session.add(result)
-        db.session.commit()
+        db.session.flush()  # Get result.id
         
-        # Formalardan gələn cavabları yığırıq
+        # Process answers
         question_ids = request.form.getlist('question_id')
         
         for q_id in question_ids:
-            answer_text = request.form.get(f'answer_{q_id}')
-            question = Question.query.get(q_id)
-            
-            # Şəkil yükləmə hissəsi
-            file = request.files.get(f'file_{q_id}')
-            filename = None
-            if file and file.filename != '':
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            
-            # AI Yoxlaması
-            ai_feedback = ai_grade_answer(question.text, answer_text, filename, session['api_key'])
-            
-            # Parse points from AI feedback
-            points = 0
             try:
-                for line in ai_feedback.split('\n'):
-                    if line.startswith('Xal:'):
-                        score = int(line.split(':')[1].strip())
-                        max_points = 5 if question.difficulty == 'Easy' else 10 if question.difficulty == 'Medium' else 20
-                        points = int((score / 10) * max_points)
-                        break
-            except:
+                q_id = int(q_id)
+                answer_text = request.form.get(f'answer_{q_id}', '')
+                question = Question.query.get(q_id)
+                
+                if not question:
+                    continue
+                
+                # Handle file upload
+                filename = None
+                file = request.files.get(f'file_{q_id}')
+                if file and file.filename != '':
+                    filename = secure_filename(file.filename)
+                    if filename:
+                        # Add timestamp to avoid collisions
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                        filename = timestamp + filename
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                
+                # AI grading
+                ai_feedback = ai_grade_answer(
+                    question.text,
+                    answer_text,
+                    filename,
+                    session['api_key']
+                )
+                
+                # Calculate points
+                max_points = calculate_max_points(question.difficulty)
                 points = 0
-            
-            total_score += points
-            
-            # Save answer
-            answer = Answer(result_id=result.id, question_id=q_id, answer_text=answer_text, 
-                          image_path=filename, points=points, 
-                          max_points=5 if question.difficulty == 'Easy' else 10 if question.difficulty == 'Medium' else 20,
-                          feedback=ai_feedback)
-            db.session.add(answer)
-            
-            results.append({
-                'question': question.text,
-                'student_answer': answer_text,
-                'feedback': ai_feedback,
-                'image': filename,
-                'points': points,
-                'max_points': 5 if question.difficulty == 'Easy' else 10 if question.difficulty == 'Medium' else 20
-            })
-
+                
+                try:
+                    for line in ai_feedback.split('\n'):
+                        if line.startswith('Xal:'):
+                            score = int(line.split(':')[1].strip())
+                            points = int((score / 10) * max_points)
+                            break
+                except (ValueError, IndexError, AttributeError) as e:
+                    app.logger.error(f"Error parsing points: {e}")
+                    points = 0
+                
+                total_score += points
+                
+                # Save answer
+                answer = Answer(
+                    result_id=result.id,
+                    question_id=q_id,
+                    answer_text=answer_text,
+                    image_path=filename,
+                    points=points,
+                    max_points=max_points,
+                    feedback=ai_feedback
+                )
+                db.session.add(answer)
+                
+                results.append({
+                    'question': question.text,
+                    'student_answer': answer_text,
+                    'feedback': ai_feedback,
+                    'image': filename,
+                    'points': points,
+                    'max_points': max_points,
+                    'difficulty': question.difficulty
+                })
+            except Exception as e:
+                app.logger.error(f"Error processing answer for question {q_id}: {e}")
+                continue
+        
         # Update total score
         result.total_score = total_score
         db.session.commit()
-
+        
         return render_template('result.html', results=results, total_score=total_score)
+        
+    except Exception as e:
+        app.logger.error(f"Error in exam POST: {e}")
+        db.session.rollback()
+        flash(f'İmtahan zamanı xəta baş verdi: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
 
 @app.route('/history')
 def history():
+    """Display user's exam history"""
     if 'username' not in session:
+        flash('Tarixçəyə baxmaq üçün giriş edin!', 'error')
         return redirect(url_for('index'))
+    
     results = Result.query.options(
         joinedload(Result.subject),
         joinedload(Result.answers).joinedload(Answer.question)
     ).filter_by(username=session['username']).order_by(Result.exam_date.desc()).all()
+    
     return render_template('history.html', results=results)
+
 
 @app.route('/dashboard')
 def dashboard():
+    """Display dashboard with all exam statistics"""
     if 'username' not in session:
+        flash('Dashboard-a baxmaq üçün giriş edin!', 'error')
         return redirect(url_for('index'))
-    # Get all results for dashboard
+    
     all_results = Result.query.options(joinedload(Result.subject)).order_by(Result.exam_date.desc()).all()
     
-    # Calculate stats
+    # Calculate statistics
     total_users = len(set(r.username for r in all_results))
     total_exams = len(all_results)
     avg_score = sum(r.total_score for r in all_results) / total_exams if total_exams > 0 else 0
     
-    return render_template('dashboard.html', results=all_results, 
-                         total_users=total_users, total_exams=total_exams, avg_score=avg_score)
+    return render_template('dashboard.html', 
+                         results=all_results,
+                         total_users=total_users,
+                         total_exams=total_exams,
+                         avg_score=avg_score)
 
-# Bazanı yaratmaq üçün (ilk işə salanda bir dəfə)
-with app.app_context():
-    db.create_all()
-    # Test üçün fənləri əlavə edirik (əgər yoxdursa)
-    if not Subject.query.first():
-        s1 = Subject(name="Kompüter Arxitekturası")
-        s2 = Subject(name="Kompüter Mühəndisliyinin Əsasları")
-        s3 = Subject(name="Riyazi Analiz")
-        db.session.add_all([s1, s2, s3])
-        db.session.commit()
-    
-    # Sualları əlavə et (əgər yoxdursa)
-    if not Question.query.first():
-        try:
-            # Riyazi Analiz sualları
-            math_subject = Subject.query.filter_by(name="Riyazi Analiz").first()
-            if math_subject:
-                # Asan suallar
-                easy_questions = [
-                    (r"1. Prove the equality \(A \cap B = B \cap A\) (Theoretical)", "Easy"),
-                    (r"2. Prove that a non-empty set of numbers that is bounded above has an upper bound. (Theoretical)", "Easy"),
-                    (r"3. Prove that a non-empty numerical set bounded below has a lower bound. (Theoretical)", "Easy"),
-                    (r"4. If \(\{x\}\) is a set of numbers and \(\{-x\}\) is the set of negatives, prove \(\inf\{-x\} = -\sup\{x\}\).", "Easy"),
-                    (r"5. Find the domain of \(f(x)=7\cot(\pi x)+\arcsin(18^{x})\)", "Easy"),
-                ]
-                
-                for text, difficulty in easy_questions:
-                    q = Question(text=text, difficulty=difficulty, subject_id=math_subject.id)
-                    db.session.add(q)
-                
-                # Orta suallar
-                medium_questions = [
-                    (r"24. Prove necessary and sufficient condition for differentiability ($f'(x_0)$ exists and is finite). (Theoretical)", "Medium"),
-                    (r"25. Prove the Product Rule: $(uv)^{\prime}=u^{\prime}v+uv^{\prime}$. (Theoretical)", "Medium"),
-                    (r"26. Differential of a function and its geometric meaning ($dy=f'(x)dx$). (Theoretical)", "Medium"),
-                ]
-                
-                for text, difficulty in medium_questions:
-                    q = Question(text=text, difficulty=difficulty, subject_id=math_subject.id)
-                    db.session.add(q)
-                
-                # Çətin suallar
-                hard_questions = [
-                    (r"50. Prove the Fundamental Theorem of Calculus. (Theoretical)", "Hard"),
-                ]
-                
-                for text, difficulty in hard_questions:
-                    q = Question(text=text, difficulty=difficulty, subject_id=math_subject.id)
-                    db.session.add(q)
-                
-                db.session.commit()
-                print("Questions seeded successfully")
-        except Exception as e:
-            print(f"Error seeding questions: {e}")
-            db.session.rollback()
+
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
+
+def init_database():
+    """Initialize database with default subjects"""
+    with app.app_context():
+        db.create_all()
+        
+        # Add default subjects if they don't exist
+        if not Subject.query.first():
+            subjects = [
+                Subject(name="Kompüter Arxitekturası"),
+                Subject(name="Kompüter Mühəndisliyinin Əsasları"),
+                Subject(name="Riyazi Analiz")
+            ]
+            db.session.add_all(subjects)
+            db.session.commit()
+            app.logger.info("Default subjects created")
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    init_database()
+    app.run(debug=True, host='0.0.0.0', port=5000)

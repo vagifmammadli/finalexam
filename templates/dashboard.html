@@ -3,23 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; background: #f1f5f9; }</style>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #f1f5f9; 
+        }
+    </style>
 </head>
 <body class="py-12 px-4">
     <div class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 flex-wrap gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-slate-900">Dashboard</h1>
                 <p class="text-slate-500 mt-1">Bütün imtahan nəticələri və statistikalar</p>
             </div>
-            <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
-                <i class="ri-home-4-line mr-2"></i>Ana Səhifə
+            <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                <i class="ri-home-4-line"></i> Ana Səhifə
             </a>
         </div>
 
+        <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <div class="flex items-center">
@@ -47,8 +55,8 @@
             
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <div class="flex items-center">
-                    <div class="p-3 bg-red-100 rounded-lg">
-                        <i class="ri-bar-chart-line text-2xl text-red-600"></i>
+                    <div class="p-3 bg-purple-100 rounded-lg">
+                        <i class="ri-bar-chart-line text-2xl text-purple-600"></i>
                     </div>
                     <div class="ml-4">
                         <p class="text-sm text-gray-600">Ortalama Xal</p>
@@ -58,11 +66,15 @@
             </div>
         </div>
 
+        <!-- Results Table -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900">Bütün Nəticələr</h2>
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <i class="ri-table-line"></i> Bütün Nəticələr
+                </h2>
             </div>
             
+            {% if results %}
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">
@@ -76,11 +88,25 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for result in results %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ result.username }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ result.subject.name }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ result.exam_date.strftime('%d.%m.%Y %H:%M') }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ result.total_score }}/50</td>
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <div class="flex items-center gap-2">
+                                    <i class="ri-user-fill text-gray-400"></i>
+                                    {{ result.username }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ result.subject.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div class="flex items-center gap-1">
+                                    <i class="ri-calendar-line text-gray-400"></i>
+                                    {{ result.exam_date.strftime('%d.%m.%Y %H:%M') }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                {{ result.total_score }}/50
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                     {% if result.total_score >= 40 %}bg-green-100 text-green-800
@@ -94,8 +120,8 @@
                     </tbody>
                 </table>
             </div>
-            
-            {% if not results %}
+            {% else %}
+            <!-- Empty State -->
             <div class="text-center py-12">
                 <i class="ri-bar-chart-line text-6xl text-gray-300 mb-4"></i>
                 <h3 class="text-xl font-medium text-gray-900 mb-2">Hələ nəticə yoxdur</h3>

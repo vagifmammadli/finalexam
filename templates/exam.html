@@ -5,10 +5,8 @@
     <title>İmtahan Davam Edir</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-
     <script defer src="//unpkg.com/mathlive"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
@@ -16,74 +14,148 @@
 
     <!-- MathJax Configuration -->
     <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [['$', '$'], ['\\(', '\\)']],
-          displayMath: [['$$', '$$'], ['\\[', '\\]']],
-          processEscapes: true,
-          processEnvironments: true,
-          packages: {'[+]': ['color', 'ams', 'amssymb']},
-          macros: {
-            RR: '\\mathbb{R}',
-            NN: '\\mathbb{N}',
-            ZZ: '\\mathbb{Z}',
-            QQ: '\\mathbb{Q}',
-            CC: '\\mathbb{C}',
-            RRn: ['\\mathbb{R}^{#1}', 1],
-            CCn: ['\\mathbb{C}^{#1}', 1]
-          }
-        },
-        startup: {
-          typeset: true,
-          ready: function() {
-            console.log('MathJax is ready');
-            MathJax.startup.defaultReady();
-            MathJax.startup.promise.then(function() {
-              console.log('MathJax startup complete');
-              // Force re-typeset after startup
-              setTimeout(function() {
-                MathJax.typeset();
-              }, 100);
-            }).catch(function(err) {
-              console.error('MathJax startup failed:', err);
-            });
-          }
-        },
-        options: {
-          ignoreHtmlClass: 'tex2jax_ignore',
-          processHtmlClass: 'tex2jax_process'
-        }
-      };
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                packages: {'[+]': ['color', 'ams', 'amssymb']},
+                macros: {
+                    RR: '\\mathbb{R}',
+                    NN: '\\mathbb{N}',
+                    ZZ: '\\mathbb{Z}',
+                    QQ: '\\mathbb{Q}',
+                    CC: '\\mathbb{C}'
+                }
+            },
+            startup: {
+                typeset: true,
+                ready: function() {
+                    console.log('MathJax is ready');
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(function() {
+                        console.log('MathJax startup complete');
+                        setTimeout(function() {
+                            MathJax.typeset();
+                        }, 100);
+                    }).catch(function(err) {
+                        console.error('MathJax startup failed:', err);
+                    });
+                }
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
     </script>
-    <!-- Load MathJax after configuration -->
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+        }
         
-        /* Animasiyalar */
-        .fade-in { animation: fadeIn 0.6s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { 
+            animation: fadeIn 0.6s ease-in-out; 
+        }
+        @keyframes fadeIn { 
+            from { 
+                opacity: 0; 
+                transform: translateY(10px); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            } 
+        }
 
-        /* Quill Editor Customization */
-        .ql-container { height: 220px; font-size: 16px; font-family: 'Inter', sans-serif; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
-        .ql-toolbar { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; background-color: #f9fafb; }
+        .ql-container { 
+            height: 220px; 
+            font-size: 16px; 
+            font-family: 'Inter', sans-serif; 
+            border-bottom-left-radius: 0.5rem; 
+            border-bottom-right-radius: 0.5rem; 
+        }
+        .ql-toolbar { 
+            border-top-left-radius: 0.5rem; 
+            border-top-right-radius: 0.5rem; 
+            background-color: #f9fafb; 
+        }
         
-        /* Custom UI Elements */
-        .badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-        .badge-easy { background-color: #dcfce7; color: #166534; }
-        .badge-medium { background-color: #fef9c3; color: #854d0e; }
-        .badge-hard { background-color: #fee2e2; color: #991b1b; }
+        .badge { 
+            padding: 4px 12px; 
+            border-radius: 9999px; 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+        }
+        .badge-easy { 
+            background-color: #dcfce7; 
+            color: #166534; 
+        }
+        .badge-medium { 
+            background-color: #fef9c3; 
+            color: #854d0e; 
+        }
+        .badge-hard { 
+            background-color: #fee2e2; 
+            color: #991b1b; 
+        }
 
-        math-field { font-size: 20px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; background: #fff; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-        math-field:focus-within { border-color: #3b82f6; ring: 2px; }
+        math-field { 
+            font-size: 20px; 
+            padding: 12px; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            width: 100%; 
+            background: #fff; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); 
+        }
+        math-field:focus-within { 
+            border-color: #3b82f6; 
+            ring: 2px; 
+        }
 
-        .tool-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; border: 1px solid #e2e8f0; background: white; color: #475569; }
-        .tool-btn:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); }
-        .active-tool { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .tool-btn { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 6px; 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            font-size: 0.875rem; 
+            font-weight: 500; 
+            transition: all 0.2s; 
+            border: 1px solid #e2e8f0; 
+            background: white; 
+            color: #475569; 
+        }
+        .tool-btn:hover { 
+            background: #f1f5f9; 
+            border-color: #cbd5e1; 
+            transform: translateY(-1px); 
+        }
+        .active-tool { 
+            background: #eff6ff; 
+            color: #2563eb; 
+            border-color: #bfdbfe; 
+        }
         
-        /* Modal Overlay */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 50; justify-content: center; align-items: center; animation: fadeIn 0.2s; }
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(4px); 
+            z-index: 50; 
+            justify-content: center; 
+            align-items: center; 
+            animation: fadeIn 0.2s; 
+        }
     </style>
 </head>
 <body class="bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -91,7 +163,7 @@
         <div class="flex items-center justify-between mb-8 fade-in">
             <div>
                 <h2 class="text-3xl font-bold text-slate-900 tracking-tight">Final İmtahanı</h2>
-                <p class="text-slate-500 mt-1">Diqqətlə oxuyun və cavablandırın.</p>
+                <p class="text-slate-500 mt-1">{{ subject_name if subject_name else 'Diqqətlə oxuyun və cavablandırın.' }}</p>
             </div>
             <div class="hidden md:flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">
                 <i class="ri-timer-line text-blue-600"></i>
@@ -109,17 +181,14 @@
                         </span>
                         <span class="text-sm text-gray-500 font-medium">Sual</span>
                     </div>
-                    <span class="badge 
-                        {% if q.difficulty == 'Easy' %} badge-easy 
-                        {% elif q.difficulty == 'Medium' %} badge-medium 
-                        {% else %} badge-hard {% endif %}">
+                    <span class="badge {% if q.difficulty == 'Easy' %}badge-easy{% elif q.difficulty == 'Medium' %}badge-medium{% else %}badge-hard{% endif %}">
                         {{ q.difficulty }}
                     </span>
                 </div>
                 
                 <div class="p-6 md:p-8">
                     <div class="text-lg text-slate-800 leading-relaxed font-medium mb-6 question-text" data-question-id="{{ q.id }}">
-                        {{ q.text | safe }}
+                        {{ q.text | safe_no_comments }}
                     </div>
                     
                     <div class="flex flex-wrap gap-3 mb-4">
@@ -141,7 +210,7 @@
                         <label class="flex items-center gap-2 text-sm text-gray-500 mb-2 cursor-pointer hover:text-blue-600 transition-colors w-max">
                             <i class="ri-attachment-line"></i> Kağız həlli yüklə (istəyə bağlı)
                         </label>
-                        <input type="file" name="file_{{ q.id }}" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"/>
+                        <input type="file" name="file_{{ q.id }}" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"/>
                     </div>
                 </div>
             </div>
@@ -155,11 +224,16 @@
         </form>
     </div>
 
+    <!-- Math Modal -->
     <div id="mathModal" class="modal-overlay">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xl mx-4 transform transition-all scale-100">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ri-calculator-line text-blue-600"></i> Riyazi Panel</h3>
-                <button onclick="closeMathModal()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="ri-close-circle-fill text-2xl"></i></button>
+                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ri-calculator-line text-blue-600"></i> Riyazi Panel
+                </h3>
+                <button onclick="closeMathModal()" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="ri-close-circle-fill text-2xl"></i>
+                </button>
             </div>
             
             <math-field id="math-input" virtual-keyboard-mode="manual">f(x) = \int x dx</math-field>
@@ -217,11 +291,16 @@
         </div>
     </div>
 
+    <!-- Graphic Modal -->
     <div id="graphicModal" class="modal-overlay">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-4xl mx-4">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i class="ri-pencil-ruler-2-line text-purple-600"></i> Qrafik Qurucusu</h3>
-                <button onclick="closeGraphicModal()" class="text-gray-400 hover:text-red-500"><i class="ri-close-circle-fill text-2xl"></i></button>
+                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ri-pencil-ruler-2-line text-purple-600"></i> Qrafik Qurucusu
+                </h3>
+                <button onclick="closeGraphicModal()" class="text-gray-400 hover:text-red-500">
+                    <i class="ri-close-circle-fill text-2xl"></i>
+                </button>
             </div>
 
             <div class="flex flex-wrap gap-2 mb-4 bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -251,17 +330,23 @@
         var currentEditorId = null;
         var mathField = document.getElementById('math-input');
 
-        // Quill Init
+        // Initialize Quill editors
         document.querySelectorAll('[id^="editor-container-"]').forEach(function(container) {
             var id = container.id.replace('editor-container-', '');
             var quill = new Quill(container, {
-                modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['image']] },
+                modules: { 
+                    toolbar: [
+                        ['bold', 'italic', 'underline'], 
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
+                        ['image']
+                    ] 
+                },
                 theme: 'snow',
                 placeholder: 'Cavabınızı bura yazın...'
             });
             editors['editor-' + id] = quill;
             
-            // Load saved content
+            // Load saved content from localStorage
             var savedContent = localStorage.getItem('exam_answer_' + id);
             if (savedContent) {
                 quill.root.innerHTML = savedContent;
@@ -273,6 +358,7 @@
             });
         });
 
+        // Form submission
         document.getElementById('examForm').onsubmit = function() {
             for (var key in editors) {
                 var qId = key.replace('editor-', '');
@@ -289,56 +375,97 @@
         function openMathModal(editorId) {
             currentEditorId = editorId;
             document.getElementById('mathModal').style.display = 'flex';
-            mathField.setValue(''); mathField.focus();
+            mathField.setValue('');
+            mathField.focus();
             if (typeof MathJax !== 'undefined') {
                 MathJax.typeset(document.getElementById('mathModal'));
             }
         }
-        function insertTemplate(latex) { mathField.executeCommand(['insert', latex]); mathField.focus(); }
+        
+        function insertTemplate(latex) {
+            mathField.executeCommand(['insert', latex]);
+            mathField.focus();
+        }
+        
         function saveMath() {
             var latex = mathField.getValue();
             var quill = editors[currentEditorId];
             var range = quill.getSelection(true);
             quill.insertText(range.index, ' $' + latex + '$ ', 'bold', true);
             closeMathModal();
-            setTimeout(() => { if(window.MathJax) window.MathJax.typesetPromise(); }, 100);
+            setTimeout(function() {
+                if (window.MathJax) {
+                    window.MathJax.typesetPromise();
+                }
+            }, 100);
         }
-        function closeMathModal() { document.getElementById('mathModal').style.display = 'none'; }
+        
+        function closeMathModal() {
+            document.getElementById('mathModal').style.display = 'none';
+        }
 
         // Graphic Functions
         var canvas = new fabric.Canvas('c', { isDrawingMode: false });
         
-        // Responsive Canvas
-        function resizeCanvas() {
-             // canvas.setWidth(document.querySelector('.modal-overlay .bg-white').clientWidth - 48); // Simple resize logic if needed
-        }
-
         function openGraphicModal(editorId) {
             currentEditorId = editorId;
             document.getElementById('graphicModal').style.display = 'flex';
-            canvas.clear(); canvas.setBackgroundColor('#fff', canvas.renderAll.bind(canvas));
+            canvas.clear();
+            canvas.setBackgroundColor('#fff', canvas.renderAll.bind(canvas));
         }
+        
         function addGrid() {
-            var gridGroup = []; var width = 850; var height = 450;
-            for (var i = 0; i < (width/25); i++) gridGroup.push(new fabric.Line([ i*25, 0, i*25, height], { stroke: '#f1f5f9', selectable: false }));
-            for (var i = 0; i < (height/25); i++) gridGroup.push(new fabric.Line([ 0, i*25, width, i*25], { stroke: '#f1f5f9', selectable: false }));
+            var gridGroup = [];
+            var width = 850;
+            var height = 450;
+            for (var i = 0; i < (width/25); i++) {
+                gridGroup.push(new fabric.Line([i*25, 0, i*25, height], { stroke: '#f1f5f9', selectable: false }));
+            }
+            for (var i = 0; i < (height/25); i++) {
+                gridGroup.push(new fabric.Line([0, i*25, width, i*25], { stroke: '#f1f5f9', selectable: false }));
+            }
             gridGroup.push(new fabric.Line([width/2, 0, width/2, height], { stroke: '#94a3b8', strokeWidth: 1, selectable: false }));
             gridGroup.push(new fabric.Line([0, height/2, width, height/2], { stroke: '#94a3b8', strokeWidth: 1, selectable: false }));
             var group = new fabric.Group(gridGroup, { left: 0, top: 0, selectable: false, evented: false });
-            canvas.add(group); canvas.sendToBack(group);
+            canvas.add(group);
+            canvas.sendToBack(group);
         }
+        
         function addShape(type) {
-            if(type==='triangle') canvas.add(new fabric.Triangle({ width: 80, height: 80, fill: 'transparent', stroke: '#2563eb', strokeWidth: 3, left: 100, top: 100 }));
-            if(type==='circle') canvas.add(new fabric.Circle({ radius: 40, fill: 'transparent', stroke: '#ef4444', strokeWidth: 3, left: 200, top: 100 }));
+            if (type === 'triangle') {
+                canvas.add(new fabric.Triangle({ width: 80, height: 80, fill: 'transparent', stroke: '#2563eb', strokeWidth: 3, left: 100, top: 100 }));
+            }
+            if (type === 'circle') {
+                canvas.add(new fabric.Circle({ radius: 40, fill: 'transparent', stroke: '#ef4444', strokeWidth: 3, left: 200, top: 100 }));
+            }
         }
-        function addText() { canvas.add(new fabric.IText('Mətn...', { left: 100, top: 200, fontSize: 18, fill: '#1e293b', fontFamily: 'Inter' })); }
+        
+        function addText() {
+            canvas.add(new fabric.IText('Mətn...', { left: 100, top: 200, fontSize: 18, fill: '#1e293b', fontFamily: 'Inter' }));
+        }
+        
         function toggleDraw() {
             canvas.isDrawingMode = !canvas.isDrawingMode;
             document.getElementById('drawBtn').classList.toggle('active-tool');
-            canvas.freeDrawingBrush.width = 3; canvas.freeDrawingBrush.color = "#1e293b";
+            canvas.freeDrawingBrush.width = 3;
+            canvas.freeDrawingBrush.color = "#1e293b";
         }
-        function deleteObject() { var ao = canvas.getActiveObjects(); if(ao.length) { canvas.discardActiveObject(); ao.forEach(o => canvas.remove(o)); } }
-        function clearGraphic() { canvas.clear(); canvas.setBackgroundColor('#fff', canvas.renderAll.bind(canvas)); }
+        
+        function deleteObject() {
+            var ao = canvas.getActiveObjects();
+            if (ao.length) {
+                canvas.discardActiveObject();
+                ao.forEach(function(o) {
+                    canvas.remove(o);
+                });
+            }
+        }
+        
+        function clearGraphic() {
+            canvas.clear();
+            canvas.setBackgroundColor('#fff', canvas.renderAll.bind(canvas));
+        }
+        
         function saveGraphic() {
             var d = canvas.toDataURL({ format: 'png', quality: 1 });
             var q = editors[currentEditorId];
@@ -346,7 +473,10 @@
             q.insertEmbed(r.index, 'image', d);
             closeGraphicModal();
         }
-        function closeGraphicModal() { document.getElementById('graphicModal').style.display = 'none'; }
+        
+        function closeGraphicModal() {
+            document.getElementById('graphicModal').style.display = 'none';
+        }
 
         // Timer functionality
         let totalTime = 100 * 60; // 100 minutes in seconds
@@ -354,7 +484,7 @@
         function updateTimer() {
             const minutes = Math.floor(totalTime / 60);
             const seconds = totalTime % 60;
-            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            timerElement.textContent = minutes.toString().padStart(2, '0') + ':' + seconds.toString().padStart(2, '0');
             if (totalTime < 600) { // Less than 10 minutes
                 timerElement.style.color = 'red';
             }
@@ -367,9 +497,8 @@
             }
         }
         const timerInterval = setInterval(updateTimer, 1000);
-    </script>
-    <script>
-        // Robust MathJax typesetting function
+
+        // MathJax typesetting
         function typesetMathJax() {
             if (window.MathJax && MathJax.typesetPromise) {
                 MathJax.typesetPromise().then(function() {
@@ -382,7 +511,6 @@
             }
         }
 
-        // Specific function to typeset question text
         function typesetQuestions() {
             const questionElements = document.querySelectorAll('.question-text');
             questionElements.forEach(function(element) {
@@ -396,7 +524,6 @@
             });
         }
 
-        // Typeset after different loading stages
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, attempting MathJax typeset');
             setTimeout(function() {
@@ -413,29 +540,11 @@
             }, 200);
         });
 
-        // Additional typeset after a delay to catch any dynamic content
         setTimeout(function() {
             console.log('Delayed MathJax typeset');
             typesetMathJax();
             typesetQuestions();
         }, 500);
-
-        // Watch for dynamic content changes
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    setTimeout(function() {
-                        typesetMathJax();
-                        typesetQuestions();
-                    }, 100);
-                }
-            });
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
     </script>
 </body>
 </html>

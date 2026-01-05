@@ -1,13 +1,19 @@
+"""
+Database Seeding Script
+Populates the database with subjects and questions
+"""
 from app import app, db, Subject, Question
 
+
 def seed_database():
+    """Seed the database with default subjects and questions"""
     with app.app_context():
-        # 1. Bazanı təmizləyirik (köhnə sualları silirik)
+        # Clear existing data
         db.drop_all()
         db.create_all()
         print("Baza təmizləndi.")
 
-        # 2. Fənləri yaradırıq
+        # Create subjects
         subj_arch = Subject(name="Kompüter Arxitekturası")
         subj_math = Subject(name="Riyazi Analiz")
 
@@ -16,10 +22,10 @@ def seed_database():
         db.session.commit()
 
         # ==========================================
-        # 1. RİYAZİ ANALİZ (Mənbə: allahkomekolsunriyazianaliz2.pdf)
+        # RİYAZİ ANALİZ SUALLARI
         # ==========================================
         
-        # --- ASAN SUALLAR (Q1-Q23: Çoxluqlar, Limitlər, Kəsilməzlik) ---
+        # Easy Questions (Q1-Q23: Çoxluqlar, Limitlər, Kəsilməzlik)
         math_easy = [
             (r"1. Prove the equality \(A \cap B = B \cap A\) (Theoretical)", "Easy"),
             (r"2. Prove that a non-empty set of numbers that is bounded above has an upper bound. (Theoretical)", "Easy"),
@@ -46,7 +52,7 @@ def seed_database():
             (r"23. Investigate the continuity of \(f(x)=\begin{cases}\frac{x^{2}-16}{x-4},&x\ne4\\ 2a+1,&x=4\end{cases}\) at \(x=4\).", "Easy")
         ]
 
-        # --- ORTA SUALLAR (Q24-Q54: Törəmə, Teylor, Sadə İnteqrallar) ---
+        # Medium Questions (Q24-Q54: Törəmə, Teylor, Sadə İnteqrallar)
         math_medium = [
             (r"24. Prove necessary and sufficient condition for differentiability ($f'(x_0)$ exists and is finite). (Theoretical)", "Medium"),
             (r"25. Prove the Product Rule: $(uv)^{\prime}=u^{\prime}v+uv^{\prime}$. (Theoretical)", "Medium"),
@@ -81,7 +87,7 @@ def seed_database():
             (r"54. Compute the integral \(\int\frac{dx}{x^{3}\sqrt{1+x^{2}}}\).", "Medium")
         ]
 
-        # --- ÇƏTİN SUALLAR (Q55-Q75: İsbatlar, Qeyri-məxsusi inteqrallar, Çoxdəyişənli, Səth inteqralları) ---
+        # Hard Questions (Q55-Q75: İsbatlar, Qeyri-məxsusi inteqrallar, Çoxdəyişənli, Səth inteqralları)
         math_hard = [
             (r"55. Prove that a function \(f(x)\) which is integrable on \([a,b]\) is bounded on this interval. (Theoretical)", "Hard"),
             (r"56. Prove the Newton-Leibniz Formula: \(\int_{a}^{b}f(x)dx=F(b)-F(a)\). (Theoretical)", "Hard"),
@@ -107,7 +113,7 @@ def seed_database():
         ]
 
         # ==========================================
-        # 2. KOMPÜTER ARXİTEKTURASI (Dəyişdirilmədi)
+        # KOMPÜTER ARXİTEKTURASI SUALLARI
         # ==========================================
         arch_questions = [
             ("Explain input unit and associated peripherials", "Easy"),
@@ -186,22 +192,32 @@ def seed_database():
             ("Using def function display number of odd and even numbers Input: {'a': 1, 'b': 2...}", "Hard")
         ]
 
-        # --- BAZAYA YAZMAQ ---
-        
-        # Riyazi Analiz
-        for q_text, difficulty in math_easy:
-            db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_math.id))
-        for q_text, difficulty in math_medium:
-            db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_math.id))
-        for q_text, difficulty in math_hard:
-            db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_math.id))
+        # Add all questions to database
+        try:
+            # Math questions
+            for q_text, difficulty in math_easy:
+                db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_math.id))
             
-        # Kompüter Arxitekturası
-        for q_text, difficulty in arch_questions:
-            db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_arch.id))
+            for q_text, difficulty in math_medium:
+                db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_math.id))
+            
+            for q_text, difficulty in math_hard:
+                db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_math.id))
+            
+            # Architecture questions
+            for q_text, difficulty in arch_questions:
+                db.session.add(Question(text=q_text, difficulty=difficulty, subject_id=subj_arch.id))
 
-        db.session.commit()
-        print(f"Baza hazırdır! Riyazi Analiz: {len(math_easy)+len(math_medium)+len(math_hard)} sual, Arxitektura: {len(arch_questions)} sual.")
+            db.session.commit()
+            
+            total_math = len(math_easy) + len(math_medium) + len(math_hard)
+            print(f"Baza hazırdır! Riyazi Analiz: {total_math} sual, Arxitektura: {len(arch_questions)} sual.")
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Xəta baş verdi: {e}")
+            raise
+
 
 if __name__ == "__main__":
     seed_database()

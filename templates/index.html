@@ -8,20 +8,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script>
-  window.MathJax = {
-    tex: {
-      inlineMath: [['$', '$'], ['\\(', '\\)']]
-    }
-  };
-</script>
-
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #f3f4f6; 
+        }
+        .animate-fade-in-up { 
+            animation: fadeInUp 0.5s ease-out; 
+        }
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
         }
         .glass-card {
             background: rgba(255, 255, 255, 0.7);
@@ -31,8 +41,8 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-
     <div class="max-w-4xl w-full animate-fade-in-up">
+        <!-- Header -->
         <div class="text-center mb-10">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white mb-4 shadow-lg shadow-blue-500/30">
                 <i class="ri-graduation-cap-fill text-3xl"></i>
@@ -40,6 +50,7 @@
             <h1 class="text-4xl font-bold text-gray-900 tracking-tight">İmtahan Simulatoru</h1>
             <p class="text-gray-500 mt-2 text-lg">Özünü sınamaq üçün fənn seç və başla.</p>
             
+            <!-- Flash Messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -52,16 +63,18 @@
             {% endwith %}
         </div>
 
+        <!-- Username Setup -->
         {% if need_username %}
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6">
             <h2 class="text-2xl font-bold text-gray-900 mb-4">İstifadəçi Adınızı Daxil Edin</h2>
             <p class="text-gray-600 mb-4">Nəticələrinizi izləmək üçün istifadəçi adınızı daxil edin.</p>
             <form method="POST" action="/set_username" onsubmit="localStorage.setItem('exam_username', document.querySelector('input[name=username]').value)">
-                <input type="text" name="username" placeholder="İstifadəçi adınız" class="w-full p-3 border border-gray-300 rounded-lg mb-4" required>
+                <input type="text" name="username" placeholder="İstifadəçi adınız" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">Daxil Et</button>
             </form>
         </div>
         {% elif need_api %}
+        <!-- API Key Setup -->
         <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6">
             <h2 class="text-2xl font-bold text-gray-900 mb-4">Gemini API Açarını Daxil Edin</h2>
             <p class="text-gray-600 mb-4">Cavabları yoxlamaq üçün öz Gemini API açarınızı daxil edin.</p>
@@ -73,26 +86,30 @@
                     <li>Google hesabınızla giriş edin</li>
                     <li>"Create API Key" düyməsini klikləyin</li>
                     <li>Yeni açar yaradın və onu kopyalayın</li>
-                    <li>Aşğıdakı sahəyə yapışdırın və "Daxil Et" klikləyin</li>
+                    <li>Aşağıdakı sahəyə yapışdırın və "Daxil Et" klikləyin</li>
                 </ol>
                 <p class="text-xs text-blue-700 mt-2">Qeyd: Pulsuz istifadə üçün kifayət qədər kredit var.</p>
             </div>
             
             <form method="POST" action="/set_api">
-                <input type="password" name="api_key" placeholder="API Açarınız" class="w-full p-3 border border-gray-300 rounded-lg mb-4" required>
+                <input type="password" name="api_key" placeholder="API Açarınız" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">Daxil Et</button>
             </form>
         </div>
         {% else %}
-
+        <!-- Subject Selection -->
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h2 class="text-xl font-bold text-gray-900">Xoş gəldiniz, {{ session.username }}!</h2>
                 <p class="text-gray-600">İmtahan tarixçənizi və nəticələrinizi izləyin.</p>
             </div>
             <div class="flex gap-3">
-                <a href="/history" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">Tarixçə</a>
-                <a href="/dashboard" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">Dashboard</a>
+                <a href="/history" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                    <i class="ri-history-line"></i> Tarixçə
+                </a>
+                <a href="/dashboard" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition flex items-center gap-2">
+                    <i class="ri-dashboard-line"></i> Dashboard
+                </a>
             </div>
         </div>
 
@@ -121,21 +138,21 @@
             </a>
             {% endfor %}
         </div>
-
         {% endif %}
 
+        <!-- Footer -->
         <footer class="mt-12 text-center text-gray-400 text-sm">
             <p>&copy; 2026 UNEC Exam Simulator. AI Powered.</p>
         </footer>
     </div>
+
+    <!-- Auto-submit username from localStorage -->
     <script>
         var needUsername = {{ need_username|tojson }};
         
-        // Check localStorage for username only if we need it
         if (needUsername) {
             const username = localStorage.getItem('exam_username');
             if (username) {
-                // Auto-submit username
                 fetch('/set_username', {
                     method: 'POST',
                     headers: {
