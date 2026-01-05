@@ -92,7 +92,7 @@ Rəy: [Qısa rəy, nəyin doğru, nəyin səhv olduğunu bildir]
 """
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         if image_path:
             full_path = os.path.join(app.config['UPLOAD_FOLDER'], image_path)
