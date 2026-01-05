@@ -69,12 +69,15 @@ def ai_grade_answer(question_text, student_answer, image_path=None, api_key=None
     import google.generativeai as genai
     genai.configure(api_key=api_key)
     
-    prompt = f"""
-Sən universitet müəllimisən və riyaziyyat suallarını qiymətləndirirsən. 
+    # Clean the input to avoid LaTeX parsing issues
+    clean_question = question_text.replace('\\', '\\\\')
+    clean_answer = student_answer.replace('\\', '\\\\')
+    
+    prompt = f"""Sən universitet müəllimisən və riyaziyyat suallarını qiymətləndirirsən.
 
-Sual: {question_text}
+Sual: {clean_question}
 
-Tələbənin mətn cavabı: {student_answer}
+Tələbənin mətn cavabı: {clean_answer}
 
 Əgər şəkil varsa, şəkildəki əl yazısı cavabını oxu və təhlil et. Şəkil riyazi düsturlar, hesablamalar və ya qrafiklər ola bilər.
 
@@ -92,8 +95,7 @@ Cavabı qiymətləndir:
 
 Format SƏRT şəkildə belə olsun:
 Xal: [0-10 arası rəqəm]
-Rəy: [Qısa rəy, nəyin doğru, nəyin səhv olduğunu bildir]
-"""
+Rəy: [Qısa rəy, nəyin doğru, nəyin səhv olduğunu bildir]"""
     
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -102,8 +104,6 @@ Rəy: [Qısa rəy, nəyin doğru, nəyin səhv olduğunu bildir]
             full_path = os.path.join(app.config['UPLOAD_FOLDER'], image_path)
             with open(full_path, 'rb') as f:
                 image_data = f.read()
-            # Determine mime type
-            mime_type = 'image/png' if image_path.lower().endswith('.png') else 'image/jpeg'
             
             from PIL import Image
             import io
