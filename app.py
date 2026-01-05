@@ -68,62 +68,59 @@ def ai_grade_answer(question_text, student_answer, image_path=None, api_key=None
     
     import google.generativeai as genai
     import re
-    genai.configure(api_key=api_key)
     
-    # Remove LaTeX expressions to avoid parsing issues with AI
-    clean_question = re.sub(r'\\[(\[].*?\\[)\]]', '[MATH EXPRESSION]', question_text)
-    clean_question = re.sub(r'\\\(.*?\\\)', '[MATH EXPRESSION]', clean_question)
-    clean_question = re.sub(r'\$\$.*?\$\$', '[MATH EXPRESSION]', clean_question)
-    clean_question = re.sub(r'\$.*?\$', '[MATH EXPRESSION]', clean_question)
+    # Completely strip all LaTeX and special characters to avoid any parsing issues
+    def clean_text(text):
+        # Remove all LaTeX expressions aggressively
+        text = re.sub(r'\\[(\[].*?\\[)\]]', '', text)
+        text = re.sub(r'\\\(.*?\\\)', '', text)
+        text = re.sub(r'\$\$.*?\$\$', '', text)
+        text = re.sub(r'\$.*?\$', '', text)
+        # Remove other LaTeX commands
+        text = re.sub(r'\\[a-zA-Z]+\{.*?\}', '', text)
+        text = re.sub(r'\\[a-zA-Z]+', '', text)
+        # Remove brackets and other math symbols that might cause issues
+        text = re.sub(r'[{}]', '', text)
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
     
-    clean_answer = re.sub(r'\\[(\[].*?\\[)\]]', '[MATH EXPRESSION]', student_answer)
-    clean_answer = re.sub(r'\\\(.*?\\\)', '[MATH EXPRESSION]', clean_answer)
-    clean_answer = re.sub(r'\$\$.*?\$\$', '[MATH EXPRESSION]', clean_answer)
-    clean_answer = re.sub(r'\$.*?\$', '[MATH EXPRESSION]', clean_answer)
+    clean_question = clean_text(question_text)
+    clean_answer = clean_text(student_answer)
     
-    prompt = f"""You are a university mathematics professor grading student answers.
-
-QUESTION: {clean_question}
-
-STUDENT ANSWER: {clean_answer}
-
-If there is an image, analyze the handwritten answer in it. The image may contain mathematical formulas, calculations, or graphs.
-
-Grade the answer based on:
-- Correctness: Mathematical calculations, formulas, and logic
-- Completeness: Are all steps shown?
-- Explanation: Is the answer explained?
-
-Grade on a 10-point scale (whole numbers only):
-- 10: Perfectly correct
-- 7-9: Mostly correct with minor errors
-- 4-6: Partially correct with major errors
-- 1-3: Minimally correct with many errors
-- 0: Completely wrong or no answer
-
-Format your response EXACTLY like this:
-Score: [0-10 number]
-Feedback: [Brief feedback on what's correct and what's wrong]"""
+    # Very simple prompt to avoid any parsing issues
+    prompt = f"Grade this math answer. Question: {clean_question}. Student answer: {clean_answer}. Give a score from 0-10 and brief feedback."
     
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         if image_path:
             full_path = os.path.join(app.config['UPLOAD_FOLDER'], image_path)
-            with open(full_path, 'rb') as f:
-                image_data = f.read()
-            
-            from PIL import Image
-            import io
-            image = Image.open(io.BytesIO(image_data))
-            
-            response = model.generate_content([prompt, image])
+            if os.path.exists(full_path):
+                from PIL import Image
+                image = Image.open(full_path)
+                response = model.generate_content([prompt, image])
+            else:
+                response = model.generate_content(prompt)
         else:
             response = model.generate_content(prompt)
         
-        return response.text
+        # Parse the response to extract score and feedback
+        response_text = response.text.strip()
+        
+        # Try to extract score
+        score_match = re.search(r'(\d+)', response_text)
+        score = int(score_match.group(1)) if score_match else 5
+        
+        # Ensure score is between 0-10
+        score = max(0, min(10, score))
+        
+        return f"Xal: {score}\nRəy: {response_text}"
+        
     except Exception as e:
-        return f"Xəta baş verdi: {str(e)}"
+        # Fallback grading if AI fails
+        return f"Xal: 5\nRəy: Cavab qiymətləndirilə bilmədi: {str(e)}"
 
 # --- Rouselər ---
 @app.route('/')
