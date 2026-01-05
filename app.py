@@ -4,8 +4,8 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.generativeai import types
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'gizli_açar_bura_yaz'
