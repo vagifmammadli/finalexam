@@ -12,32 +12,51 @@
     <script defer src="//unpkg.com/mathlive"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
+    <!-- MathJax Configuration -->
     <script>
       window.MathJax = {
-        tex: { 
-          inlineMath: [['$', '$'], ['\\(', '\\)']], 
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
           displayMath: [['$$', '$$'], ['\\[', '\\]']],
           processEscapes: true,
           processEnvironments: true,
-          packages: {'[+]': ['color']}
+          packages: {'[+]': ['color', 'ams', 'amssymb']},
+          macros: {
+            RR: '\\mathbb{R}',
+            NN: '\\mathbb{N}',
+            ZZ: '\\mathbb{Z}',
+            QQ: '\\mathbb{Q}',
+            CC: '\\mathbb{C}',
+            RRn: ['\\mathbb{R}^{#1}', 1],
+            CCn: ['\\mathbb{C}^{#1}', 1]
+          }
         },
-        startup: { 
+        startup: {
           typeset: true,
           ready: function() {
+            console.log('MathJax is ready');
             MathJax.startup.defaultReady();
             MathJax.startup.promise.then(function() {
-              // Typeset again after everything is loaded
+              console.log('MathJax startup complete');
+              // Force re-typeset after startup
               setTimeout(function() {
                 MathJax.typeset();
-              }, 50);
+              }, 100);
+            }).catch(function(err) {
+              console.error('MathJax startup failed:', err);
             });
           }
+        },
+        options: {
+          ignoreHtmlClass: 'tex2jax_ignore',
+          processHtmlClass: 'tex2jax_process'
         }
       };
     </script>
+    <!-- Load MathJax after configuration -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
@@ -99,7 +118,7 @@
                 </div>
                 
                 <div class="p-6 md:p-8">
-                    <div class="text-lg text-slate-800 leading-relaxed font-medium mb-6">
+                    <div class="text-lg text-slate-800 leading-relaxed font-medium mb-6 question-text" data-question-id="{{ q.id }}">
                         {{ q.text | safe }}
                     </div>
                     
@@ -350,24 +369,72 @@
         const timerInterval = setInterval(updateTimer, 1000);
     </script>
     <script>
-        // Ensure MathJax is loaded before typesetting
+        // Robust MathJax typesetting function
         function typesetMathJax() {
-            if (window.MathJax && MathJax.typeset) {
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise().then(function() {
+                    console.log('MathJax typesetting completed');
+                }).catch(function(err) {
+                    console.error('MathJax typesetting failed:', err);
+                });
+            } else if (window.MathJax && MathJax.typeset) {
                 MathJax.typeset();
             }
         }
-        
-        // Typeset immediately
-        typesetMathJax();
-        
-        // Typeset after DOM is fully loaded
+
+        // Specific function to typeset question text
+        function typesetQuestions() {
+            const questionElements = document.querySelectorAll('.question-text');
+            questionElements.forEach(function(element) {
+                if (window.MathJax && MathJax.typesetPromise) {
+                    MathJax.typesetPromise([element]).then(function() {
+                        console.log('Question typesetting completed for:', element.dataset.questionId);
+                    }).catch(function(err) {
+                        console.error('Question typesetting failed for:', element.dataset.questionId, err);
+                    });
+                }
+            });
+        }
+
+        // Typeset after different loading stages
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(typesetMathJax, 100);
+            console.log('DOM loaded, attempting MathJax typeset');
+            setTimeout(function() {
+                typesetMathJax();
+                typesetQuestions();
+            }, 100);
         });
-        
-        // Typeset after window loads
+
         window.addEventListener('load', function() {
-            setTimeout(typesetMathJax, 200);
+            console.log('Window loaded, attempting MathJax typeset');
+            setTimeout(function() {
+                typesetMathJax();
+                typesetQuestions();
+            }, 200);
+        });
+
+        // Additional typeset after a delay to catch any dynamic content
+        setTimeout(function() {
+            console.log('Delayed MathJax typeset');
+            typesetMathJax();
+            typesetQuestions();
+        }, 500);
+
+        // Watch for dynamic content changes
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    setTimeout(function() {
+                        typesetMathJax();
+                        typesetQuestions();
+                    }, 100);
+                }
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
         });
     </script>
 </body>
