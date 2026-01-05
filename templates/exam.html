@@ -17,8 +17,25 @@
 
     <script>
       window.MathJax = {
-        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], processEscapes: true },
-        startup: { typeset: true }
+        tex: { 
+          inlineMath: [['$', '$'], ['\\(', '\\)']], 
+          displayMath: [['$$', '$$'], ['\\[', '\\]']],
+          processEscapes: true,
+          processEnvironments: true,
+          packages: {'[+]': ['color']}
+        },
+        startup: { 
+          typeset: true,
+          ready: function() {
+            MathJax.startup.defaultReady();
+            MathJax.startup.promise.then(function() {
+              // Typeset again after everything is loaded
+              setTimeout(function() {
+                MathJax.typeset();
+              }, 50);
+            });
+          }
+        }
       };
     </script>
 
@@ -333,7 +350,25 @@
         const timerInterval = setInterval(updateTimer, 1000);
     </script>
     <script>
-        MathJax.typeset();
+        // Ensure MathJax is loaded before typesetting
+        function typesetMathJax() {
+            if (window.MathJax && MathJax.typeset) {
+                MathJax.typeset();
+            }
+        }
+        
+        // Typeset immediately
+        typesetMathJax();
+        
+        // Typeset after DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(typesetMathJax, 100);
+        });
+        
+        // Typeset after window loads
+        window.addEventListener('load', function() {
+            setTimeout(typesetMathJax, 200);
+        });
     </script>
 </body>
 </html>
