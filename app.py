@@ -1,6 +1,6 @@
 import os
 import random
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
@@ -126,7 +126,19 @@ def set_username():
 def set_api():
     api_key = request.form.get('api_key')
     if api_key:
-        session['api_key'] = api_key
+        # Test the API key validity
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            # Make a simple test call to verify the key
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content("Hello")
+            # If we get here without exception, key is valid
+            session['api_key'] = api_key
+            flash("API key is valid and saved!", "success")
+        except Exception as e:
+            flash(f"Invalid API key: {str(e)}", "error")
+            return redirect(url_for('index'))
     return redirect(url_for('index'))
 
 @app.route('/exam/<int:subject_id>', methods=['GET', 'POST'])
