@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNEC İmtahan Simulatoru</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    }
+  };
+</script>
+
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+
+    <div class="max-w-4xl w-full animate-fade-in-up">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white mb-4 shadow-lg shadow-blue-500/30">
+                <i class="ri-graduation-cap-fill text-3xl"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-gray-900 tracking-tight">İmtahan Simulatoru</h1>
+            <p class="text-gray-500 mt-2 text-lg">Özünü sınamaq üçün fənn seç və başla.</p>
+        </div>
+
+        {% if need_username %}
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">İstifadəçi Adınızı Daxil Edin</h2>
+            <p class="text-gray-600 mb-4">Nəticələrinizi izləmək üçün istifadəçi adınızı daxil edin.</p>
+            <form method="POST" action="/set_username" onsubmit="localStorage.setItem('exam_username', document.querySelector('input[name=username]').value)">
+                <input type="text" name="username" placeholder="İstifadəçi adınız" class="w-full p-3 border border-gray-300 rounded-lg mb-4" required>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">Daxil Et</button>
+            </form>
+        </div>
+        {% elif need_api %}
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Gemini API Açarını Daxil Edin</h2>
+            <p class="text-gray-600 mb-4">Cavabları yoxlamaq üçün öz Gemini API açarınızı daxil edin.</p>
+            
+            <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                <h3 class="font-semibold text-blue-900 mb-2">API Açarı Necə Əldə Etmək Olar:</h3>
+                <ol class="list-decimal list-inside text-blue-800 space-y-1 text-sm">
+                    <li><a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline hover:text-blue-600">Google AI Studio</a> saytına daxil olun</li>
+                    <li>Google hesabınızla giriş edin</li>
+                    <li>"Create API Key" düyməsini klikləyin</li>
+                    <li>Yeni açar yaradın və onu kopyalayın</li>
+                    <li>Aşğıdakı sahəyə yapışdırın və "Daxil Et" klikləyin</li>
+                </ol>
+                <p class="text-xs text-blue-700 mt-2">Qeyd: Pulsuz istifadə üçün kifayət qədər kredit var.</p>
+            </div>
+            
+            <form method="POST" action="/set_api">
+                <input type="password" name="api_key" placeholder="API Açarınız" class="w-full p-3 border border-gray-300 rounded-lg mb-4" required>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">Daxil Et</button>
+            </form>
+        </div>
+        {% else %}
+
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Xoş gəldiniz, {{ session.username }}!</h2>
+                <p class="text-gray-600">İmtahan tarixçənizi və nəticələrinizi izləyin.</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="/history" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">Tarixçə</a>
+                <a href="/dashboard" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">Dashboard</a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for subject in subjects %}
+            <a href="/exam/{{ subject.id }}" class="group relative block p-8 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:-translate-y-1 overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <i class="ri-book-open-line text-6xl text-blue-600"></i>
+                </div>
+                
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                        <i class="ri-article-line text-xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800">{{ subject.name }}</h2>
+                </div>
+                
+                <div class="flex items-center justify-between mt-6">
+                    <span class="text-sm font-medium text-gray-500 bg-gray-50 px-3 py-1 rounded-lg border">
+                        <i class="ri-question-line align-bottom mr-1"></i> 5 Sual
+                    </span>
+                    <span class="flex items-center text-blue-600 font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                        İmtahanı Başlat <i class="ri-arrow-right-line ml-1"></i>
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% endif %}
+
+        <footer class="mt-12 text-center text-gray-400 text-sm">
+            <p>&copy; 2026 UNEC Exam Simulator. AI Powered.</p>
+        </footer>
+    </div>
+    <script>
+        var needUsername = {{ need_username|tojson }};
+        
+        // Check localStorage for username only if we need it
+        if (needUsername) {
+            const username = localStorage.getItem('exam_username');
+            if (username) {
+                // Auto-submit username
+                fetch('/set_username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'username=' + encodeURIComponent(username)
+                }).then(() => {
+                    location.reload();
+                });
+            }
+        }
+    </script>
+</body>
+</html>
